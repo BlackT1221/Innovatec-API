@@ -7,7 +7,8 @@ class Settings(BaseSettings):
     # URL por defecto (útil para desarrollo local). 
     # Si existe en el archivo .env, Pydantic la sobrescribirá automáticamente.
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/evaluacion_cba"
-
+    APPLICATION_PASSWORD: str = "contraseña_por_defecto"
+    APPLICATION_EMAIL: str = "innovatec.cba@gmail.com"
     # Le indicamos a Pydantic que lea el archivo .env
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

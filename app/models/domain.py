@@ -48,6 +48,10 @@ class Evaluador(Base):
     areas: Mapped[List["AreaConocimiento"]] = relationship(secondary=evaluador_area, back_populates="evaluadores")
     asignaciones: Mapped[List["AsignacionEvaluacion"]] = relationship(back_populates="evaluador")
 
+    # Para el inicio de sesión
+    otp_code: Mapped[Optional[str]] = mapped_column(String(6), nullable=True)
+    otp_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
 # ==========================================
 # 3. FORMACIÓN Y RÚBRICAS
 # ==========================================

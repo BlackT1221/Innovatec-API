@@ -77,3 +77,15 @@ def create_asignacion(db: Session, obj_in: AsignacionEvaluacionCreate) -> Asigna
 def get_asignaciones(db: Session, skip: int = 0, limit: int = 100) -> List[AsignacionEvaluacion]:
     stmt = select(AsignacionEvaluacion).offset(skip).limit(limit)
     return list(db.scalars(stmt).all())
+
+def get_asignaciones_por_evaluador(db: Session, evaluador_id: UUID) -> List[AsignacionEvaluacion]:
+    """Obtiene todas las asignaciones de proyectos para un evaluador específico."""
+    stmt = (
+        select(AsignacionEvaluacion)
+        .options(
+            selectinload(AsignacionEvaluacion.grupo),
+            selectinload(AsignacionEvaluacion.registro_fisico)
+        )
+        .where(AsignacionEvaluacion.evaluador_id == evaluador_id)
+    )
+    return list(db.scalars(stmt).all())

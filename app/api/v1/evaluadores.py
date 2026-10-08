@@ -48,3 +48,24 @@ def asignar_proyecto_a_evaluador(
 @router.get("/asignaciones/", response_model=List[AsignacionEvaluacionResponse])
 def listar_asignaciones(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return crud_evaluador.get_asignaciones(db=db, skip=skip, limit=limit)
+
+@router.get("/evaluador/{evaluador_id}/asignaciones")
+def listar_asignaciones_de_evaluador(evaluador_id: UUID, db: Session = Depends(get_db)):
+    """Retorna la lista de proyectos asignados a un instructor con su estado actual."""
+    asignaciones = crud_evaluador.get_asignaciones_por_evaluador(db, evaluador_id=evaluador_id)
+    
+    # Mapeamos la respuesta para que la app móvil reciba un JSON limpio y fácil de leer
+    resultado = []
+    for asig in asignaciones:
+        resultado.append({
+            "asignacion_id": str(asig.id),
+            "estado": asig.estado,
+            "proyecto": {
+                "id": str(asig.grupo.id),
+                "nombre_proyecto": asig.grupo.nombre_proyecto,
+                "trimestre": asig.grupo.trimestre,
+                "logo_url": asig.grupo.logo_url
+            },
+            "puntaje_final": float(asig.registro_fisico.puntaje_final) if asig.registro_fisico else None
+        })
+    return resultado
