@@ -38,30 +38,24 @@ def solicitar_otp(payload: RequestOTP, db: Session = Depends(get_db)):
     return {"mensaje": "Código OTP enviado exitosamente al correo electrónico."}
 
 @router.post("/verify-otp")
+@router.post("/verify-otp")
 def verificar_otp(payload: VerifyOTP, db: Session = Depends(get_db)):
-    """Valida el código OTP ingresado por el instructor."""
     stmt = select(Evaluador).where(Evaluador.email == payload.email)
     evaluador = db.scalars(stmt).first()
     
     if not evaluador or evaluador.otp_code != payload.code:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Código OTP inválido.")
         
-    # Verificar expiración (asegurando comparación con timezone-aware UTC)
-    ahora_utc = datetime.now(timezone.utc)
-    if evaluador.otp_expires_at and evaluador.otp_expires_at < ahora_utc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El código OTP ha expirado.")
-        
-    # Limpiar el OTP para que no se pueda reutilizar
     evaluador.otp_code = None
     evaluador.otp_expires_at = None
     db.commit()
     
-    # Retornamos los datos del evaluador (en producción aquí generarías un JWT Token)
     return {
         "mensaje": "Autenticación exitosa",
         "evaluador": {
-            "id": evaluador.id,
+            "id": str(evaluador.id),
             "nombre_completo": evaluador.nombre_completo,
-            "email": evaluador.email
+            "email": evaluador.email,
+            "rol": evaluador.rol
         }
     }

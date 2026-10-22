@@ -42,16 +42,22 @@ class Evaluador(Base):
     nombre_completo: Mapped[str] = mapped_column(String(150), nullable=False)
     email: Mapped[str] = mapped_column(String(150), unique=True, index=True, nullable=False)
     auth_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), unique=True, nullable=True)
+    rol: Mapped[str] = mapped_column(String(20), default="EVALUADOR", nullable=False)
+    
+    otp_code: Mapped[Optional[str]] = mapped_column(String(6), nullable=True)
+    otp_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     creado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # Relaciones
-    areas: Mapped[List["AreaConocimiento"]] = relationship(secondary=evaluador_area, back_populates="evaluadores")
-    asignaciones: Mapped[List["AsignacionEvaluacion"]] = relationship(back_populates="evaluador")
-
-    # Para el inicio de sesión
-    otp_code: Mapped[Optional[str]] = mapped_column(String(6), nullable=True)
-    otp_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-
+    areas: Mapped[List["AreaConocimiento"]] = relationship(
+        secondary=evaluador_area,
+        back_populates="evaluadores"
+    )
+    asignaciones: Mapped[List["AsignacionEvaluacion"]] = relationship(
+        back_populates="evaluador",
+        cascade="all, delete-orphan"
+    )
+    
 # ==========================================
 # 3. FORMACIÓN Y RÚBRICAS
 # ==========================================
@@ -128,17 +134,18 @@ class AsignacionEvaluacion(Base):
     evaluador: Mapped["Evaluador"] = relationship(back_populates="asignaciones")
     grupo: Mapped["GrupoProyecto"] = relationship(back_populates="asignaciones")
     # One-to-One
-    registro_fisico: Mapped["RegistroEvaluacionFisica"] = relationship(back_populates="asignacion", uselist=False)
+    registro_evaluacion: Mapped["RegistroEvaluacion"] = relationship(back_populates="asignacion", uselist=False)
 
-class RegistroEvaluacionFisica(Base):
-    __tablename__ = "registro_evaluacion_fisica"
+class RegistroEvaluacion(Base):
+    __tablename__ = "registro_evaluacion"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     asignacion_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("asignacion_evaluacion.id", ondelete="CASCADE"), unique=True)
-    imagen_escaneada_url: Mapped[str] = mapped_column(String(255), nullable=False)
+    
+    # Eliminamos el campo imagen_escaneada_url
     resultados_crudos = mapped_column(JSONB, nullable=False)
     puntaje_final = mapped_column(Numeric(5, 2), nullable=True)
-    fecha_escaneo: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    fecha_evaluacion: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # Relaciones
-    asignacion: Mapped["AsignacionEvaluacion"] = relationship(back_populates="registro_fisico")
+    asignacion: Mapped["AsignacionEvaluacion"] = relationship(back_populates="registro_evaluacion")

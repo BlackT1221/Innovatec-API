@@ -84,7 +84,7 @@ def get_asignaciones_por_evaluador(db: Session, evaluador_id: UUID) -> List[Asig
         select(AsignacionEvaluacion)
         .options(
             selectinload(AsignacionEvaluacion.grupo),
-            selectinload(AsignacionEvaluacion.registro_fisico)
+            selectinload(AsignacionEvaluacion.registro_evaluacion)
         )
         .where(AsignacionEvaluacion.evaluador_id == evaluador_id)
     )

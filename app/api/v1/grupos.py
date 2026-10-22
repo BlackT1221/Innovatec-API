@@ -2,6 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
+from app.models.domain import AsignacionEvaluacion, GrupoProyecto
+from sqlalchemy.orm import selectinload
+from sqlalchemy import select
 
 from app.schemas.grupo import (
     GrupoProyectoResponse, 
@@ -44,6 +47,26 @@ def listar_grupos(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
     Devuelve la lista paginada de todos los grupos y sus aprendices.
     """
     return crud_grupo.get_grupos(db=db, skip=skip, limit=limit)
+
+@router.get("/estado/sin-asignar")
+def listar_grupos_sin_asignar(db: Session = Depends(get_db)):
+    """Devuelve los proyectos que aún no tienen ningún evaluador asignado."""
+    stmt = (
+        select(GrupoProyecto)
+        .outerjoin(AsignacionEvaluacion)
+        .where(AsignacionEvaluacion.id == None)
+        .options(selectinload(GrupoProyecto.programa))
+    )
+    grupos = db.scalars(stmt).all()
+    
+    return [
+        {
+            "id": str(g.id),
+            "nombre_proyecto": g.nombre_proyecto,
+            "trimestre": g.trimestre,
+            "programa": g.programa.nombre
+        } for g in grupos
+    ]
 
 @router.get("/{grupo_id}", response_model=GrupoProyectoResponse)
 def obtener_grupo(grupo_id: UUID, db: Session = Depends(get_db)):

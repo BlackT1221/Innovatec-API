@@ -1,7 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from typing import List
 from uuid import UUID
+from app.models.domain import Evaluador, GrupoProyecto, ProgramaFormacion, AsignacionEvaluacion
+from sqlalchemy import select
+
 
 from app.schemas.evaluador import (
     EvaluadorCreate,
@@ -54,7 +57,6 @@ def listar_asignaciones_de_evaluador(evaluador_id: UUID, db: Session = Depends(g
     """Retorna la lista de proyectos asignados a un instructor con su estado actual."""
     asignaciones = crud_evaluador.get_asignaciones_por_evaluador(db, evaluador_id=evaluador_id)
     
-    # Mapeamos la respuesta para que la app móvil reciba un JSON limpio y fácil de leer
     resultado = []
     for asig in asignaciones:
         resultado.append({
@@ -66,6 +68,56 @@ def listar_asignaciones_de_evaluador(evaluador_id: UUID, db: Session = Depends(g
                 "trimestre": asig.grupo.trimestre,
                 "logo_url": asig.grupo.logo_url
             },
-            "puntaje_final": float(asig.registro_fisico.puntaje_final) if asig.registro_fisico else None
+            "puntaje_final": float(asig.registro_evaluacion.puntaje_final) if asig.registro_evaluacion else None
         })
     return resultado
+
+@router.delete("/asignar/{asignacion_id}", status_code=status.HTTP_204_NO_CONTENT)
+def eliminar_asignacion(asignacion_id: UUID, db: Session = Depends(get_db)):
+    """Elimina una asignación existente."""
+    stmt = select(AsignacionEvaluacion).where(AsignacionEvaluacion.id == asignacion_id)
+    asignacion = db.scalars(stmt).first()
+    
+    if not asignacion:
+        raise HTTPException(status_code=404, detail="La asignación no existe.")
+        
+    db.delete(asignacion)
+    db.commit()
+    return None
+
+@router.get("/{evaluador_id}/grupos-compatibles")
+def listar_grupos_compatibles(evaluador_id: UUID, db: Session = Depends(get_db)):
+    """
+    Devuelve los grupos de proyectos que pertenecen a alguna de las áreas 
+    del evaluador, excluyendo absolutamente todos los que YA tienen una asignación previa.
+    """
+    # 1. Obtener las áreas del evaluador
+    stmt_eval = select(Evaluador).options(selectinload(Evaluador.areas)).where(Evaluador.id == evaluador_id)
+    evaluador = db.scalars(stmt_eval).first()
+    
+    if not evaluador:
+        raise HTTPException(status_code=404, detail="Evaluador no encontrado")
+        
+    areas_ids = [area.id for area in evaluador.areas]
+    if not areas_ids:
+        return [] # No tiene áreas de conocimiento, no puede evaluar nada.
+        
+    # 2. AQUÍ ESTÁ EL CAMBIO: Obtener IDs de TODOS los grupos que ya tienen una asignación (sin importar el instructor)
+    stmt_asignados = select(AsignacionEvaluacion.grupo_id)
+    grupos_asignados_ids = db.scalars(stmt_asignados).all()
+    
+    # 3. Buscar grupos cuyo programa pertenezca a sus áreas, descartando los que ya están asignados a alguien
+    stmt_grupos = select(GrupoProyecto).join(ProgramaFormacion).where(ProgramaFormacion.area_id.in_(areas_ids))
+    
+    if grupos_asignados_ids:
+        stmt_grupos = stmt_grupos.where(~GrupoProyecto.id.in_(grupos_asignados_ids))
+        
+    grupos_compatibles = db.scalars(stmt_grupos).all()
+    
+    return [
+        {
+            "id": str(g.id),
+            "nombre_proyecto": g.nombre_proyecto,
+            "trimestre": g.trimestre
+        } for g in grupos_compatibles
+    ]
