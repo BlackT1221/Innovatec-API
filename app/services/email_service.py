@@ -1,7 +1,7 @@
 import requests
 import os
 
-def enviar_correo_brevo(destinatario: str, codigo: str):
+def enviar_correo_otp(destinatario: str, codigo: str):
     url = "https://api.brevo.com/v3/smtp/email"
     headers = {
         "accept": "application/json",
