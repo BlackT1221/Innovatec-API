@@ -8,12 +8,13 @@ from app.api.dependencies import get_db
 from app.models.domain import Evaluador
 from app.schemas.auth import RequestOTP, VerifyOTP
 from app.services.email_service import enviar_correo_otp
+from app.services.email import enviar_correo_otp
 
 router = APIRouter(prefix="/auth", tags=["Autenticación por OTP"])
 
 @router.post("/request-otp")
 def solicitar_otp(payload: RequestOTP, db: Session = Depends(get_db)):
-    """Busca al evaluador por correo, genera un código de 6 dígitos y se lo envía."""
+    """Busca al evaluador por correo, genera un código de 6 dígitos y se lo envía por Resend."""
     stmt = select(Evaluador).where(Evaluador.email == payload.email)
     evaluador = db.scalars(stmt).first()
     
@@ -32,8 +33,13 @@ def solicitar_otp(payload: RequestOTP, db: Session = Depends(get_db)):
     
     db.commit()
     
-    # Enviar correo
-    enviar_correo_otp(evaluador.email, codigo_otp)
+    try:
+        enviar_correo_otp(evaluador.email, codigo_otp)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="No se pudo enviar el correo de verificación. Intente nuevamente en unos segundos."
+        )
     
     return {"mensaje": "Código OTP enviado exitosamente al correo electrónico."}
 

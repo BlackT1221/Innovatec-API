@@ -1,43 +1,35 @@
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import os
+import resend
 
-import dotenv
-dotenv.load_dotenv()
-
-# Configura tus credenciales SMTP (o usa variables de entorno)
-SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 587
-SENDER_EMAIL = dotenv.get_key(".env", "APPLICATION_EMAIL")
-SENDER_PASSWORD = dotenv.get_key(".env", "APPLICATION_PASSWORD")
+resend.api_key = os.getenv("RESEND_API_KEY")
 
 def enviar_correo_otp(destinatario: str, codigo: str):
-    """Envía el código de acceso de 6 dígitos al correo del instructor."""
-    asunto = "Tu código de acceso - Innovatec CBA"
-    cuerpo = f"""
-    <html>
-      <body>
-        <h2>Sistema de Evaluación de Proyectos CBA</h2>
-        <p>Has solicitado iniciar sesión en la aplicación móvil.</p>
-        <p>Tu código de acceso de un solo uso es:</p>
-        <h1 style="color: #2e7d32; letter-spacing: 5px;">{codigo}</h1>
-        <p>Este código expirará en 10 minutos. Si no solicitaste este código, puedes ignorar este mensaje.</p>
-      </body>
-    </html>
     """
-
-    message = MIMEMultipart("alternative")
-    message["Subject"] = asunto
-    message["From"] = SENDER_EMAIL
-    message["To"] = destinatario
-    message.attach(MIMEText(cuerpo, "html"))
-
+    Envía el código OTP utilizando la API HTTP de Resend (Puerto 443 - No bloqueado por Render).
+    """
     try:
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.starttls()
-            server.login(SENDER_EMAIL, SENDER_PASSWORD)
-            server.sendmail(SENDER_EMAIL, destinatario, message.as_string())
+        params = {
+            # Si usas el dominio gratuito de prueba de Resend, debe ser "onboarding@resend.dev"
+            # Si ya verificaste tu dominio, puedes usar "no-reply@tudominio.com"
+            "from": "Innovatec CBA <onboarding@resend.dev>",
+            "to": [destinatario],
+            "subject": "Código de Verificación - Innovatec CBA",
+            "html": f"""
+            <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+                <h2 style="color: #38A800;">Innovatec CBA - Verificación de Acceso</h2>
+                <p>Has solicitado iniciar sesión en la plataforma de evaluación.</p>
+                <p>Tu código de acceso temporal es:</p>
+                <div style="background: #f4f4f4; padding: 15px; font-size: 24px; font-weight: bold; text-align: center; letter-spacing: 5px; color: #38A800; border-radius: 8px;">
+                    {codigo}
+                </div>
+                <p style="margin-top: 20px; font-size: 12px; color: #777;">Este código expirará en unos minutos. Si no solicitaste este código, puedes ignorar este mensaje.</p>
+            </div>
+            """,
+        }
+
+        response = resend.Emails.send(params)
+        print(f"Correo enviado exitosamente a {destinatario}. ID: {response.get('id')}")
+        return True
     except Exception as e:
-        print(f"Error enviando correo: {e}")
-        # En desarrollo local, si no configuras SMTP, puedes imprimirlo en consola:
-        print(f"[DEV] Código OTP para {destinatario}: {codigo}")
+        print(f"Error crítico al enviar correo con Resend: {e}")
+        raise e
