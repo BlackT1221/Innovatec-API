@@ -16,5 +16,11 @@ def enviar_correo_otp(destinatario: str, codigo: str):
     }
     
     response = requests.post(url, json=payload, headers=headers)
+    
+    # --- AGREGA ESTOS PRINTS PARA DIAGNOSTICAR ---
+    print(f"Código de respuesta Brevo: {response.status_code}")
+    print(f"Respuesta completa Brevo: {response.text}")
+    # ---------------------------------------------
+    
     if response.status_code != 201:
         raise Exception(f"Error en Brevo: {response.text}")
