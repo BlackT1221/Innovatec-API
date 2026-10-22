@@ -9,7 +9,7 @@ def enviar_correo_otp(destinatario: str, codigo: str):
         "content-type": "application/json"
     }
     payload = {
-        "sender": {"name": "Innovatec CBA", "email": "tu_correo_verificado@gmail.com"},
+        "sender": {"name": "Innovatec CBA", "email": "innovatec.cba@gmail.com"},
         "to": [{"email": destinatario}],
         "subject": "Código de Verificación - Innovatec CBA",
         "htmlContent": f"<h3>Tu código OTP es: <strong>{codigo}</strong></h3>"
