@@ -8,7 +8,6 @@ from app.api.dependencies import get_db
 from app.models.domain import Evaluador
 from app.schemas.auth import RequestOTP, VerifyOTP
 from app.services.email_service import enviar_correo_otp
-from app.services.email import enviar_correo_otp
 
 router = APIRouter(prefix="/auth", tags=["Autenticación por OTP"])
 
@@ -32,7 +31,7 @@ def solicitar_otp(payload: RequestOTP, db: Session = Depends(get_db)):
     evaluador.otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
     
     db.commit()
-    
+
     try:
         enviar_correo_otp(evaluador.email, codigo_otp)
     except Exception as e:
